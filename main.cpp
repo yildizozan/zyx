@@ -1,21 +1,22 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+
 #include <iostream>
 #include <cstdio>
-#include <wiringPi.h>
-#include <softPwm.h>
 
-#define KNOWN_DISTANCE 18.0
-#define KNOWN_RADIUS 4.0
+#include <pigpio.h>
 
 using namespace cv;
 using namespace std;
 
-#define motorBlack	11
-#define motorGreen	13
-#define motorRed	15
-#define motorOrange	16
+#define KNOWN_DISTANCE  18.0
+#define KNOWN_RADIUS    4.0
+
+#define motorBlack    17
+#define motorGreen    27
+#define motorRed      22
+#define motorOrange   23
 
 void find_focalLength_imgHeight();
 
@@ -61,8 +62,6 @@ void find_focalLength_imgHeight()
     
     focalLength = (KNOWN_DISTANCE * radius) / KNOWN_RADIUS;
     
-    cout << src.elemSize() << endl;
-    cout << typeid(src.data[0]).name() << endl;
     
 }
 
@@ -93,10 +92,15 @@ void getCircleProporties(VideoCapture cap) {
 
         HoughCircles(gray, circles, HOUGH_GRADIENT, 1, gray.rows / 16, 100, 30, 1, 200);
 
-
-        for (size_t i = 0; i < circles.size(); i++)
         {
-            Vec3i c = circles[i]; Point center = Point(c[0], c[1]); x_coordinate = (double)c[0]; y_coordinate = (double)c[1]; circle(src, center, 1, Scalar(0, 100, 100), 3, LINE_AA); 
+            Vec3i c = circles[0]; 
+            Point center = Point(c[0], c[1]); 
+
+            x_coordinate = (double)c[0];
+            y_coordinate = (double)c[1];
+
+            circle(src, center, 1, Scalar(0, 100, 100), 3, LINE_AA); 
+            
             radius = (double)c[2];
 
             circle(src, center, (int)radius, Scalar(255, 0, 255), 3, LINE_AA);
@@ -132,11 +136,26 @@ void getCircleProporties(VideoCapture cap) {
 
 int main(int argc, char** argv)
 {
-  if(wiringPiSetup() == -1) {
-    cout << "Setup wiring pi failed";
-    return 1;
-  }	
+  const int LIMIT = 100;
 
+  if (gpioInitialise() < 0) {
+    return -1;
+  }
+
+  gpioSetMode(motorBlack, PI_OUTPUT);
+  gpioSetMode(motorGreen, PI_OUTPUT);
+  gpioSetMode(motorRed, PI_OUTPUT);
+  gpioSetMode(motorOrange, PI_OUTPUT);
+
+  const int plate_initial_state = 600;
+  gpioServo(motorBlack, plate_initial_state);
+  gpioServo(motorGreen, plate_initial_state);
+  gpioServo(motorRed, plate_initial_state);
+  gpioServo(motorOrange, plate_initial_state);
+
+  cout << "Check commands!" << endl;
+
+  cout << "Detect initial image.." << endl;
   find_focalLength_imgHeight();
 
   VideoCapture cap(0);
