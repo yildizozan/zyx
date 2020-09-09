@@ -18,6 +18,8 @@ using namespace std;
 #define motorRed      22
 #define motorOrange   23
 
+#define PLATE_INITIAL_STATE 600
+
 void find_focalLength_imgHeight();
 
 double getCircle_x_coordinate();
@@ -95,9 +97,13 @@ void getCircleProporties(VideoCapture cap) {
         {
             Vec3i c = circles[0]; 
             Point center = Point(c[0], c[1]); 
+            
+            //balance(c);
 
             x_coordinate = (double)c[0];
             y_coordinate = (double)c[1];
+
+            
 
             circle(src, center, 1, Scalar(0, 100, 100), 3, LINE_AA); 
             
@@ -134,6 +140,8 @@ void getCircleProporties(VideoCapture cap) {
     
 }
 
+void balance(Vec3i);
+
 int main(int argc, char** argv)
 {
   const int LIMIT = 100;
@@ -147,16 +155,15 @@ int main(int argc, char** argv)
   gpioSetMode(motorRed, PI_OUTPUT);
   gpioSetMode(motorOrange, PI_OUTPUT);
 
-  const int plate_initial_state = 600;
-  gpioServo(motorBlack, plate_initial_state);
-  gpioServo(motorGreen, plate_initial_state);
-  gpioServo(motorRed, plate_initial_state);
-  gpioServo(motorOrange, plate_initial_state);
+  gpioServo(motorBlack, PLATE_INITIAL_STATE);
+  gpioServo(motorGreen, PLATE_INITIAL_STATE);
+  gpioServo(motorRed, PLATE_INITIAL_STATE);
+  gpioServo(motorOrange, PLATE_INITIAL_STATE);
 
   cout << "Check commands!" << endl;
 
   cout << "Detect initial image.." << endl;
-  find_focalLength_imgHeight();
+  //find_focalLength_imgHeight();
 
   VideoCapture cap(0);
 
@@ -165,6 +172,9 @@ int main(int argc, char** argv)
   return 0;
 }
 
+void balance(Vec3i ball) {
+  
+}
 
 double getCircle_x_coordinate()
 {
