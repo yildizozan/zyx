@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.5.1)
 
 project(zyx C CXX)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+            "Default build type: Release" FORCE)
+endif()
+
+set(CMAKE_INSTALL_PREFIX /usr/local/bin/)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(Threads REQUIRED)
@@ -61,16 +68,18 @@ add_custom_command(
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 # Targets greeter_[async_](client|server)
-foreach(_target main)
-  add_executable(zyx "${_target}.cpp"
-    miniPID.cpp
-    ${hw_proto_srcs}
-    ${hw_grpc_srcs})
-  target_link_libraries(zyx
-    atomic
-    pigpio
-    ${_REFLECTION}
-    ${_GRPC_GRPCPP}
-    ${_PROTOBUF_LIBPROTOBUF}
-    ${OpenCV_LIBS})
-endforeach()
+add_executable(zyx main.cpp
+  miniPID.cpp
+  ${hw_proto_srcs}
+  ${hw_grpc_srcs})
+target_link_libraries(zyx
+  atomic
+  pigpio
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+  ${OpenCV_LIBS})
+
+install(TARGETS zyx
+    DESTINATION ${CMAKE_INSTALL_PREFIX}
+    )
