@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
             "{@Ki            |<none>| Integral value        }"
             "{@Kd            |<none>| Derivative            }";
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Hello world! Zyx software v1.0.0");
+    parser.about("Hello world! Zyx software v0.2.0");
     if (parser.has("help")) {
         parser.printMessage();
         return EXIT_FAILURE;
