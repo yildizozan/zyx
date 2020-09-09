@@ -7,18 +7,25 @@
 
 #include <pigpio.h>
 
+#include "miniPID.h"
+
+#define KNOWN_DISTANCE 18.0
+#define KNOWN_RADIUS 4.0
+
 using namespace cv;
 using namespace std;
 
-#define KNOWN_DISTANCE  18.0
-#define KNOWN_RADIUS    4.0
+#define MOTOR_BLACK   17
+#define MOTOR_GREEN   27
+#define MOTOR_RED     22
+#define MOTOR_ORANGE  23
 
-#define motorBlack    17
-#define motorGreen    27
-#define motorRed      22
-#define motorOrange   23
+#define PLATE_INITIAL_STATE 750
 
-#define PLATE_INITIAL_STATE 600
+#define LIMIT 250
+
+MiniPID pid_x = MiniPID(.1,.01,0);
+MiniPID pid_y = MiniPID(.1,.01,0);
 
 void find_focalLength_imgHeight();
 
@@ -64,21 +71,36 @@ void find_focalLength_imgHeight()
     
     focalLength = (KNOWN_DISTANCE * radius) / KNOWN_RADIUS;
     
+    cout << src.elemSize() << endl;
+    cout << typeid(src.data[0]).name() << endl;
     
 }
 
-void getCircleProporties(VideoCapture cap) {
-    //VideoCapture cap(0);
+void system_check();
+void move_system(double x, double y);
 
+int main(int argc, char** argv)
+{
+  if (gpioInitialise() < 0) {
+    return -1;
+  }
 
-    //int frame_width = static_cast<int>(cap.get(CAP_PROP_FRAME_WIDTH)); //get the width of frames of the video
-    //int frame_height = static_cast<int>(cap.get(CAP_PROP_FRAME_HEIGHT)); //get the height of frames of the video
+  gpioSetMode(MOTOR_BLACK, PI_OUTPUT);
+  gpioSetMode(MOTOR_GREEN, PI_OUTPUT);
+  gpioSetMode(MOTOR_RED, PI_OUTPUT);
+  gpioSetMode(MOTOR_ORANGE, PI_OUTPUT);
+  
+  //system_check();
 
-    //Size frame_size(frame_width, frame_height);
-    //int frames_per_second = 5;
+	pid_x.setOutputLimits(-LIMIT,LIMIT);
+	pid_x.setOutputRampRate(25);
+	
+	pid_y.setOutputLimits(-LIMIT,LIMIT);
+	pid_y.setOutputRampRate(25);
 
+  find_focalLength_imgHeight();
 
-    //VideoWriter oVideoWriter("MyVideo.avi", VideoWriter::fourcc('M', 'J', 'P', 'G'), frames_per_second, frame_size, true);
+  VideoCapture cap(0);
 
     while (waitKey(30) != 'q') {
 
@@ -94,19 +116,25 @@ void getCircleProporties(VideoCapture cap) {
 
         HoughCircles(gray, circles, HOUGH_GRADIENT, 1, gray.rows / 16, 100, 30, 1, 200);
 
+
+      
         {
             Vec3i c = circles[0]; 
-            Point center = Point(c[0], c[1]); 
-            
-            //balance(c);
 
-            x_coordinate = (double)c[0];
-            y_coordinate = (double)c[1];
+Point center = Point(c[0], c[1]); 
 
-            
+x_coordinate = (double)c[0] - 320;
+y_coordinate = (double)c[1] - 240;
 
-            circle(src, center, 1, Scalar(0, 100, 100), 3, LINE_AA); 
-            
+	double out_x = pid_x.getOutput(x_coordinate,0.0);
+	double out_y = pid_y.getOutput(y_coordinate,0.0);
+
+	//move_system(out_x, out_y);
+
+cout << endl << x_coordinate << ": " << out_x << endl << y_coordinate << ": " << out_y << endl;
+
+circle(src, center, 1, Scalar(0, 100, 100), 3, LINE_AA); 
+
             radius = (double)c[2];
 
             circle(src, center, (int)radius, Scalar(255, 0, 255), 3, LINE_AA);
@@ -117,8 +145,8 @@ void getCircleProporties(VideoCapture cap) {
             //float hit_time = distance / (focalLength * (radius * (gray.size().height / image_height)) / distance);
 
 
-            string label = " x = " + to_string(x_coordinate - 316);
-            string label_2 = " y = " + to_string(y_coordinate - 316);
+            string label = " x = " + to_string(x_coordinate);
+            string label_2 = " y = " + to_string(y_coordinate);
             string label_3 = " z = " + to_string(z_coordinate);
             //string label_4 = " hit_time = " + to_string(hit_time);
 
@@ -129,51 +157,86 @@ void getCircleProporties(VideoCapture cap) {
 
         }
 
-        //oVideoWriter.write(src);
-
 
 
         imshow("window", src);
 
 
     }
-    
-}
-
-void balance(Vec3i);
-
-int main(int argc, char** argv)
-{
-  const int LIMIT = 100;
-
-  if (gpioInitialise() < 0) {
-    return -1;
-  }
-
-  gpioSetMode(motorBlack, PI_OUTPUT);
-  gpioSetMode(motorGreen, PI_OUTPUT);
-  gpioSetMode(motorRed, PI_OUTPUT);
-  gpioSetMode(motorOrange, PI_OUTPUT);
-
-  gpioServo(motorBlack, PLATE_INITIAL_STATE);
-  gpioServo(motorGreen, PLATE_INITIAL_STATE);
-  gpioServo(motorRed, PLATE_INITIAL_STATE);
-  gpioServo(motorOrange, PLATE_INITIAL_STATE);
-
-  cout << "Check commands!" << endl;
-
-  cout << "Detect initial image.." << endl;
-  //find_focalLength_imgHeight();
-
-  VideoCapture cap(0);
-
-  getCircleProporties(cap);
   
   return 0;
 }
 
-void balance(Vec3i ball) {
-  
+void move_system(double x, double y){
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE - x);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE + x);
+
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE + y);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE - y);
+
+}
+
+void system_check() {
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE);
+time_sleep(2);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE + 250);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE - 250);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE - 250);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE + 250);
+// Three down, One up
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE - 250);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE - 250);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE + 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE - 250);
+time_sleep(1);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE - 250);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE + 250);
+time_sleep(2);
+  gpioServo(MOTOR_BLACK, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_GREEN, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_RED, PLATE_INITIAL_STATE);
+  gpioServo(MOTOR_ORANGE, PLATE_INITIAL_STATE);
 }
 
 double getCircle_x_coordinate()
