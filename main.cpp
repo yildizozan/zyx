@@ -163,7 +163,7 @@ void ThreadProcessFrames() {
             cvtColor(frame, gray, COLOR_BGR2GRAY);
 
             GaussianBlur(gray, gray, Size(7, 7), 1.5, 1.5);
-            HoughCircles(gray, circles, HOUGH_GRADIENT, 1, CAMERA_WIDTH, 10, 20, 30, 50);
+            HoughCircles(gray, circles, HOUGH_GRADIENT, 1, CAMERA_WIDTH, 60, 30, 12, 160);
             if (!circles.empty()) {
                 Vec3f c = circles[0];
                 int16_t x_coordinate = c[0];
@@ -259,6 +259,7 @@ int main(int argc, char **argv) {
 
     // Signal Handler
     gpioSetSignalFunc(SIGINT, signal_handler);
+    gpioSetSignalFunc(SIGTERM, signal_handler);
 
     gpioSetMode(MOTOR_BLACK, PI_OUTPUT);
     gpioSetMode(MOTOR_GREEN, PI_OUTPUT);

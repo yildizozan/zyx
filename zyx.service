@@ -1,0 +1,8 @@
+[Unit]
+Description=Zyx
+
+[Service]
+ExecStart=/usr/local/bin/zyx .3 .01 4
+
+[Install]
+WantedBy=multi-user.target

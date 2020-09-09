@@ -81,5 +81,7 @@ target_link_libraries(zyx
   ${OpenCV_LIBS})
 
 install(TARGETS zyx
-    DESTINATION ${CMAKE_INSTALL_PREFIX}
-    )
+    DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+install(FILES "${CMAKE_SOURCE_DIR}/zyx.service" 
+    DESTINATION /etc/systemd/system)
