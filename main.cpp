@@ -1,21 +1,22 @@
-#include <stdio.h>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+#include <iostream>
 using namespace cv;
-int main(int argc, char** argv )
+int main()
 {
-	if ( argc != 2 )
+	std::string image_path = samples::findFile("lena.png");
+	Mat img = imread(image_path, IMREAD_COLOR);
+	if(img.empty())
 	{
-		printf("usage: DisplayImage.out <Image_Path>\n");
-		return -1;
+		std::cout << "Could not read the image: " << image_path << std::endl;
+		return 1;
 	}
-	Mat src, dst;
-	src = imread( argv[1], 1 );
-	if ( !src.data )
+	imshow("Display window", img);
+	int k = waitKey(0); // Wait for a keystroke in the window
+	if(k == 's')
 	{
-		printf("No image data \n");
-		return -1;
+		imwrite("starry_night.png", img);
 	}
-	GaussianBlur( src, dst, Size( 3, 3 ), 3, 3 );
-	imwrite("result.png", dst);
 	return 0;
 }
